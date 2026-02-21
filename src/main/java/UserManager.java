@@ -76,5 +76,43 @@ public class UserManager implements Repository<User> {
         return Optional.empty();
     }
 
+    public List<User> findByfilters(UserFilter filter) {
+        List<User> result = new ArrayList<>();
 
+        for (User user : users.values()) {
+            if (filter.test(user)) {
+                result.add(user);
+            }
+        }
+
+        return result;
+    }
+
+    public List<User> findAll(UserFilter filter, Comparator<User> sorter) {
+
+        List<User> result = findByfilters(filter);
+        result.sort(sorter);
+
+        return result;
+    }
+
+    public boolean exists(String username) {
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+
+        return users.containsKey(username);
+    }
+
+    public void update(String username, String newFullName, String newEmail) {
+
+        User existing = users.get(username);
+        if (username == null) {
+            throw new IllegalArgumentException("Username not found " + username);
+        }
+
+        User updated = new User(username, newFullName, newEmail);
+        
+        users.put(username, updated);
+    }
 }
