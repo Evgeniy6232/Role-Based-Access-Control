@@ -1,5 +1,6 @@
 import java.util.Comparator;
 
+
 public class UserSorters {
 
     public static Comparator<User> byUsername() {
