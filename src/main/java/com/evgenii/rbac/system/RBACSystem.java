@@ -7,14 +7,12 @@ import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
 import com.evgenii.rbac.repository.*;
 
-import javax.management.BadBinaryOpValueExpException;
-
 public class RBACSystem {
 
     private UserManager userManager;
     private RoleManager roleManager;
     private AssignmentManager assignmentManager;
-    String currentUser;
+    private String currentUser;
 
     public RBACSystem() {
         this.userManager = new UserManager();
@@ -76,8 +74,8 @@ public class RBACSystem {
         StringBuilder stats = new StringBuilder();
         stats.append("Statistic \n");
         stats.append("Users: ").append(userManager.count()).append("\n");
-        stats.append("Role: ").append(roleManager.count()).append("\n");
-        stats.append("Assignment" ).append(assignmentManager.count()).append("\n");
+        stats.append("Roles: ").append(roleManager.count()).append("\n");
+        stats.append("Assignments" ).append(assignmentManager.count()).append("\n");
 
         long active = assignmentManager.getActiveAssignments().size();
         stats.append("Active assignment: ").append(active).append("\n");
