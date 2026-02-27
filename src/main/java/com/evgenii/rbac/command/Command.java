@@ -1,5 +1,7 @@
 package com.evgenii.rbac.command;
 
+import com.evgenii.rbac.system.RBACSystem;
+
 import java.util.Scanner;
 
 @FunctionalInterface
