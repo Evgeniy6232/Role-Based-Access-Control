@@ -1,11 +1,11 @@
 package com.evgenii.rbac.command;
 
 import com.evgenii.rbac.filter.UserFilters;
+import com.evgenii.rbac.model.Permission;
+import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 
 public class CommandRegistry {
@@ -219,6 +219,278 @@ public class CommandRegistry {
 
     private static void registerRoleCommands(CommandParser parser) {
 
+        parser.register(new Command(
+                "role-list",
+                "Вывести список всех ролей",
+                ((scanner, rbacSystem, args) -> {
+
+                    if (args.isEmpty()) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    var roles = rbacSystem.getRoleManager().findAll();
+                    if (roles.isEmpty()) {
+                        System.out.println("Roles dont exist");
+                        return;
+                    }
+
+                    System.out.println("----------Role list----------");
+                    for (Role role : roles) {
+                        System.out.printf(" - %s | Assignments: &d | ID: %s%m",
+                                role.getName(),
+                                role.getPermissions().size(),
+                                role.getId()
+                        );
+                    }
+                    System.out.println("All roles: " + roles.size());
+
+
+                })
+        ));
+
+        parser.register(new Command(
+                "role-create",
+                "Create new role",
+                ((scanner, rbacSystem, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Collections.emptyMap()).orElse(null);
+
+                    if (parsed == null || parsed.baseArgs().size() != 1) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String roleName = parsed.baseArgs().get(0);
+
+                    if (rbacSystem.getRoleManager().exists(roleName)) {
+                        System.out.println("error: role " + roleName + "exist");
+                        return;
+                    }
+
+                    System.out.println("Input description: ");
+                    String description = scanner.nextLine().trim();
+                    
+                    Role role = new Role(roleName, description);
+                    rbacSystem.getRoleManager().add(role);
+                    System.out.println("Role " + roleName + "create");
+
+                    System.out.println("Add permission? (y/n)");
+                    if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
+                        
+                        while (true) {
+                            System.out.println("Input name permission or 'stop' :");
+                            String permName = scanner.nextLine().trim();
+                            if (permName.equalsIgnoreCase("stop")) break;
+
+                            System.out.println("resource: ");
+                            String resource = scanner.nextLine().trim();
+                            System.out.println("description: ");
+                            String permDesc = scanner.nextLine().trim();
+
+                            try {
+                                Permission perm = new Permission(permName, resource, permDesc);
+                                rbacSystem.getRoleManager().addPermissionToRole(roleName, perm);
+                                System.out.println("Permission added");
+                            } catch (IllegalArgumentException e) {
+                                System.out.println("Error: " + e.getMessage());
+                            }
+                        }
+                    }
+
+                    System.out.println(role.format());
+                })
+        ));
+
+        parser.register(new Command(
+                "role-view",
+                "Show role",
+                ((scanner, rbacSystem, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Collections.emptyMap()).orElse(null);
+
+                    if (parsed == null || parsed.baseArgs().size() != 1) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String roleName = parsed.baseArgs().getFirst();
+
+                    var roleOpt = rbacSystem.getRoleManager().findByName(roleName);
+                    if (roleOpt.isEmpty()) {
+                        System.out.println("Role dont exist");
+                        return;
+                    }
+
+                    System.out.println(roleOpt.get().format());
+                })
+        ));
+
+        parser.register(new Command(
+                "role-update",
+                "Update description role",
+                ((scanner, rbacSystem, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Map.of()).orElse(null);
+                    if (parsed == null || parsed.baseArgs().size() != 2) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String roleName = parsed.baseArgs().get(0);
+                    String newDescription = parsed.baseArgs().get(1);
+
+                    var roleOpt = rbacSystem.getRoleManager().findByName(roleName);
+                    if (roleOpt.isEmpty()) {
+                        System.out.println("role dont exist");
+                        return;
+                    }
+
+                    roleOpt.get().setDescription(newDescription);
+                    System.out.println("Description role '" + roleName + "' update");
+                })
+        ));
+
+        parser.register(new Command(
+                "role-delete",
+                "Delete role",
+                ((scanner, rbacSystem, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Map.of()).orElse(null);
+                    if (parsed == null || parsed.baseArgs().size() != 2) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String roleName = parsed.baseArgs().get(0);
+                    String newDescription = parsed.baseArgs().get(1);
+
+                    var roleOpt = rbacSystem.getRoleManager().findByName(roleName);
+                    if (roleOpt.isEmpty()) {
+                        System.out.println("role dont exist");
+                        return;
+                    }
+
+                    Role role = roleOpt.get();
+                    var assignment = rbacSystem.getAssignmentManager().findByRole(role);
+                    if (!assignment.isEmpty()) {
+                        System.out.println("Role exist");
+
+                        System.out.println("Delete role? (y/n)");
+                        String confirm = scanner.nextLine().trim();
+                        if (!confirm.equalsIgnoreCase("y")) {
+                            System.out.println("Delete canceled");
+                            return;
+                        }
+                    }
+                    rbacSystem.getRoleManager().remove(role);
+                    System.out.println("Role '" + roleName + "' deleted");
+                })
+        ));
+
+        parser.register(new Command(
+                "role-add-permission",
+                "Add permission for role",
+                ((scanner, rbacSystem, args) -> {
+
+                    var signFlag = Map.of(
+                            "--name", 1,
+                            "--resource", 1,
+                            "--description", 1
+                    );
+
+                    var parsed = CommandParser.parseArgs(args, signFlag).orElse(null);
+
+                    if (parsed == null || parsed.baseArgs().isEmpty()) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String roleName = parsed.baseArgs().getFirst();
+
+                    var flags = parsed.flags();
+                    if(!flags.containsKey("--name") || !flags.containsKey("--resource") || !flags.containsKey("--description")) {
+                        System.out.println("error: incorrect input flags");
+                        return;
+                    }
+
+                    String permName = flags.get("--name").getFirst();
+                    String resource = flags.get("--resource").getFirst();
+                    String description = flags.get("--description").getFirst();
+
+                    if (!rbacSystem.getRoleManager().exists(roleName)) {
+                        System.out.println("Role not found");
+                        return;
+                    }
+
+                    try {
+                        Permission permission = new Permission(permName, resource, description);
+                        rbacSystem.getRoleManager().addPermissionToRole(roleName, permission);
+                        System.out.println("Permisiion '" + permName + "'  added for role");
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("error " + e.getMessage());
+                    }
+                })
+        ));
+
+        parser.register(new Command(
+                "role-remove-description",
+                "Remove description for role",
+                ((scanner, rbacSystem, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Map.of()).orElse(null);
+                    if (parsed == null || parsed.baseArgs().size() != 2) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String roleName = parsed.baseArgs().get(0);
+                    String newDescription = parsed.baseArgs().get(1);
+
+                    var roleOpt = rbacSystem.getRoleManager().findByName(roleName);
+                    if (roleOpt.isEmpty()) {
+                        System.out.println("role don't exist");
+                        return;
+                    }
+
+                    Role role = roleOpt.get();
+
+
+                    var permissions = role.getPermissions();
+                    if (permissions.isEmpty()) {
+                        System.out.println("role don't have permission");
+                        return;
+                    }
+
+                    System.out.println("Permission for role '" + roleName + "' :");
+                    List<Permission> permList = new ArrayList<>(permissions);
+
+                    for (int i = 0; i < permList.size(); i++) {
+                        Permission p = permList.get(i);
+                        System.out.printf("  %d. %s on %s: %s%n",
+                                i + 1, p.name(), p.resource(), p.description());
+                    }
+
+                    System.out.println("Enter the number permission to delete");
+                    String input = scanner.nextLine().trim();
+
+                    try {
+                        int index = Integer.parseInt(input) - 1;
+
+                        if (index < 0 || index >= permList.size()) {
+                            System.out.println("Error: incorrect number");
+                            return;
+                        }
+
+                        Permission toRemove = permList.get(index);
+                        rbacSystem.getRoleManager().removePermissionFromRole(roleName, toRemove);
+                        System.out.println("Permission '" + toRemove.name() + "' deleted");;
+
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("ERROR: " + e.getMessage());
+                    }
+                })
+        ));
     }
 
     private static void registerAssignmentCommands(CommandParser parser) {
