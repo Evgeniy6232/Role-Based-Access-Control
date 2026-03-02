@@ -1,63 +1,65 @@
 package com.evgenii.rbac.command;
 
 import com.evgenii.rbac.system.RBACSystem;
-
 import java.util.*;
 
 public class CommandParser {
 
-    private Map<String, Command> commands; //зарегистрированные команды
-    private Map<String, String> commandDescriptions; //описание команд для справки
+    private final Map<String, Command> commands = new HashMap<>();
 
-    public CommandParser() {
-        this.commands = new HashMap<>();
-        this.commandDescriptions = new HashMap<>();
+    public void register(Command command) {
+        commands.put(command.name(), command);
     }
 
-    public void registerCommand(String name, String description, Command command) {
-        commands.put(name, command);
-        commandDescriptions.put(name, description);
-    }
+    public void execute(String input, Scanner scanner, RBACSystem system) {
+        if (input == null || input.isBlank()) return;
 
-    public void executeCommand(String commandName, Scanner scanner, RBACSystem system) {
+        String[] parts = input.trim().split("\\s+");
+        String commandName = parts[0];
+        List<String> args = Arrays.asList(parts).subList(1, parts.length);
+
         Command command = commands.get(commandName);
         if (command == null) {
-            System.out.println("Unknown command" + commandName);
-            System.out.println("Type 'Help' to see available commands");
+            System.out.println("Command dont found " + commandName);
             return;
         }
-        command.execute(scanner, system);
+
+        command.execute(scanner, system, args);
     }
 
     public void printHelp() {
-        System.out.println("---------- List cmd ---------- \n");
-
-        List<String> sortedCommands = new ArrayList<>(commands.keySet());
-        Collections.sort(sortedCommands);
-
-        for (String cmd : sortedCommands) {
-            System.out.printf(" # %s - %s\n", cmd, commandDescriptions.get(cmd));
+        System.out.println("----------Command list----------");
+        for (Command cmd : commands.values()) {
+            System.out.println("# " + cmd.name());
+            System.out.println("  -" + cmd.description());
         }
-        System.out.println();
     }
 
-    public void parseAndExecute(String input, Scanner scanner, RBACSystem system) {
-        String command = input.trim().toLowerCase();
+    public static Optional<ArgumentSet> parseArgs(List<String> args, Map<String, Integer> flagSignature) {
+        Map<String, List<String>> flags = new HashMap<>();
+        List<String> baseArgs = new ArrayList<>();
 
-        if (command.isEmpty()) return;
-        executeCommand(command, scanner, system);
+        int i = 0;
+        while (i < args.size()) {
+            String token = args.get(i);
+
+            if (flagSignature.containsKey(token)) {
+                int argCount = flagSignature.get(token);
+
+                if (i + argCount >= args.size()) {
+                    return Optional.empty();
+                }
+
+                List<String> values = args.subList(i + 1, i + 1 + argCount);
+                flags.put(token, new ArrayList<>(values));
+
+                i += argCount + 1;
+            } else {
+                baseArgs.add(token);
+                i++;
+            }
+        }
+
+        return Optional.of(new ArgumentSet(flags, baseArgs));
     }
-
-    public static void main(String[] args) {
-        CommandParser parser = new CommandParser();
-
-        parser.registerCommand("hello", "Prints hello message",
-                (scanner, system) -> System.out.println("Hello!"));
-
-        parser.printHelp();
-
-        Scanner scanner = new Scanner(System.in);
-        parser.parseAndExecute("hello", scanner, null);
-    }
-
 }

@@ -9,9 +9,9 @@ import com.evgenii.rbac.repository.*;
 
 public class RBACSystem {
 
-    private UserManager userManager;
-    private RoleManager roleManager;
-    private AssignmentManager assignmentManager;
+    private final UserManager userManager;
+    private final RoleManager roleManager;
+    private final AssignmentManager assignmentManager;
     private String currentUser;
 
     public RBACSystem() {
