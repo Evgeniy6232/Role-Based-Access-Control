@@ -1,16 +1,20 @@
 package com.evgenii.rbac.command;
 
+import com.evgenii.rbac.assignment.RoleAssignment;
+import com.evgenii.rbac.assignment.TemporaryAssignment;
 import com.evgenii.rbac.filter.UserFilters;
+import com.evgenii.rbac.model.AssignmentMetadata;
 import com.evgenii.rbac.model.Permission;
 import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.logging.ErrorManager;
 
 public class CommandRegistry {
 
-    public static void registerAll (CommandParser parser) {
+    public static void registerAll(CommandParser parser) {
         registerUserCommands(parser);
         registerRoleCommands(parser);
         registerAssignmentCommands(parser);
@@ -77,7 +81,7 @@ public class CommandRegistry {
                     String fullname = args.get(1);
                     String email = args.get(2);
 
-                    if (username.isEmpty() || fullname.isEmpty() || email.isEmpty() ){
+                    if (username.isEmpty() || fullname.isEmpty() || email.isEmpty()) {
                         System.out.println("Arguments should not be empty");
                         return;
                     }
@@ -121,7 +125,7 @@ public class CommandRegistry {
         parser.register(new Command(
                 "user-update",
                 "Обновлние пользователя",
-                ((scanner, rbacSystem, args) -> {
+                (scanner, rbacSystem, args) -> {
 
                     if (args.isEmpty()) {
                         ArgumentError();
@@ -136,7 +140,7 @@ public class CommandRegistry {
                         return;
                     }
 
-                    String username = parsed.baseArgs().get(0);
+                    String username = parsed.baseArgs().getFirst();
 
                     var userOpt = rbacSystem.getUserManager().findByUsername(username);
                     if (userOpt.isEmpty()) {
@@ -148,7 +152,7 @@ public class CommandRegistry {
 
                     Function<String, Optional<String>> getFlag = key ->
                             Optional.ofNullable(parsed.flags().get(key))
-                                    .map(list -> list.get(0));
+                                    .map(List::getFirst);
 
                     String newFullName = getFlag.apply("--fullname").orElse(user.fullname());
                     String newEmail = getFlag.apply("--email").orElse(user.email());
@@ -159,20 +163,20 @@ public class CommandRegistry {
                     } catch (IllegalArgumentException e) {
                         System.out.println("error " + e.getMessage());
                     }
-                })
+                }
         ));
 
         parser.register(new Command(
                 "user-delete",
                 "Удаление пользователя",
-                ((scanner, rbacSystem, args) -> {
+                (scanner, rbacSystem, args) -> {
 
-                    if (args.size() != 1 ) {
+                    if (args.size() != 1) {
                         ArgumentError();
                         return;
                     }
 
-                    String username = args.get(0);
+                    String username = args.getFirst();
 
                     var userOpt = rbacSystem.getUserManager().findByUsername(username);
                     if (userOpt.isEmpty()) {
@@ -183,13 +187,13 @@ public class CommandRegistry {
                     User user = userOpt.get();
 
                     System.out.println("User " + user.username());
-                    System.out.println("fullanme "+ user.fullname());
+                    System.out.println("fullname " + user.fullname());
                     System.out.println("Email " + user.email());
 
-                    var assignmnets = rbacSystem.getAssignmentManager().findByUser(user);
-                    if (!assignmnets.isEmpty()) {
-                        System.out.println("Current assignments " + assignmnets.size());
-                        for (var a : assignmnets) {
+                    var assignments = rbacSystem.getAssignmentManager().findByUser(user);
+                    if (!assignments.isEmpty()) {
+                        System.out.println("Current assignments " + assignments.size());
+                        for (var a : assignments) {
                             System.out.println(" -" + a.role().getName());
                         }
                     }
@@ -202,7 +206,7 @@ public class CommandRegistry {
                     }
 
                     int countRemove = 0;
-                    for (var assignment : assignmnets) {
+                    for (var assignment : assignments) {
                         if (rbacSystem.getAssignmentManager().remove(assignment)) {
                             countRemove++;
                         }
@@ -211,7 +215,7 @@ public class CommandRegistry {
                     rbacSystem.getUserManager().remove(user);
                     System.out.println("User '" + username + "' remove\n");
                     System.out.println("Assignment delete: " + countRemove);
-                })
+                }
         ));
 
 
@@ -222,7 +226,7 @@ public class CommandRegistry {
         parser.register(new Command(
                 "role-list",
                 "Вывести список всех ролей",
-                ((scanner, rbacSystem, args) -> {
+                (scanner, rbacSystem, args) -> {
 
                     if (args.isEmpty()) {
                         ArgumentError();
@@ -231,7 +235,7 @@ public class CommandRegistry {
 
                     var roles = rbacSystem.getRoleManager().findAll();
                     if (roles.isEmpty()) {
-                        System.out.println("Roles dont exist");
+                        System.out.println("Roles don't exist");
                         return;
                     }
 
@@ -246,7 +250,7 @@ public class CommandRegistry {
                     System.out.println("All roles: " + roles.size());
 
 
-                })
+                }
         ));
 
         parser.register(new Command(
@@ -261,7 +265,7 @@ public class CommandRegistry {
                         return;
                     }
 
-                    String roleName = parsed.baseArgs().get(0);
+                    String roleName = parsed.baseArgs().getFirst();
 
                     if (rbacSystem.getRoleManager().exists(roleName)) {
                         System.out.println("error: role " + roleName + "exist");
@@ -270,14 +274,14 @@ public class CommandRegistry {
 
                     System.out.println("Input description: ");
                     String description = scanner.nextLine().trim();
-                    
+
                     Role role = new Role(roleName, description);
                     rbacSystem.getRoleManager().add(role);
                     System.out.println("Role " + roleName + "create");
 
                     System.out.println("Add permission? (y/n)");
                     if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
-                        
+
                         while (true) {
                             System.out.println("Input name permission or 'stop' :");
                             String permName = scanner.nextLine().trim();
@@ -409,7 +413,7 @@ public class CommandRegistry {
                     String roleName = parsed.baseArgs().getFirst();
 
                     var flags = parsed.flags();
-                    if(!flags.containsKey("--name") || !flags.containsKey("--resource") || !flags.containsKey("--description")) {
+                    if (!flags.containsKey("--name") || !flags.containsKey("--resource") || !flags.containsKey("--description")) {
                         System.out.println("error: incorrect input flags");
                         return;
                     }
@@ -484,16 +488,182 @@ public class CommandRegistry {
 
                         Permission toRemove = permList.get(index);
                         rbacSystem.getRoleManager().removePermissionFromRole(roleName, toRemove);
-                        System.out.println("Permission '" + toRemove.name() + "' deleted");;
+                        System.out.println("Permission '" + toRemove.name() + "' deleted");
 
                     } catch (IllegalArgumentException e) {
                         System.out.println("ERROR: " + e.getMessage());
                     }
                 })
         ));
+
+        parser.register(new Command(
+                "role-search",
+                "Search by filters",
+                (scanner, rbacSystem, args) -> {
+
+                    var signatureFlags = Map.of(
+                            "--name", 1,
+                            "--permission", 1,
+                            "--minPermission", 1
+                    );
+
+                    var parsed = CommandParser.parseArgs(args, signatureFlags).orElse(null);
+                    if (parsed == null) {
+                        System.out.println("error incorrect flags");
+                        return;
+                    }
+
+                    Function<String, Optional<String>> getFlag = key ->
+                            Optional.ofNullable(parsed.flags().get(key)).map(List::getFirst);
+
+                    var roles = rbacSystem.getRoleManager().findAll().stream()
+                            .filter(r -> getFlag.apply("--name").map(v -> r.getName().contains(v)).orElse(true))
+                            .filter(r -> getFlag.apply("--permission").map(v -> r.hasPermission(v, "")).orElse(true))
+                            .filter(r -> {
+                                var min = getFlag.apply("--minPermission");
+                                if (min.isPresent()) {
+                                    try {
+                                        return r.getPermissions().size() >= Integer.parseInt(min.get());
+                                    } catch (NumberFormatException e) {
+                                        return true;
+                                    }
+                                }
+
+                                return true;
+                            }).toList();
+
+                    if (roles.isEmpty()) {
+                        System.out.println("Roles don't exists");
+                        return;
+                    }
+
+                    System.out.println("Found " + roles.size());
+                    roles.forEach(r -> System.out.println(" -" + r.getName() + " (" + r.getPermissions().size() + " permissions"));
+                }
+        ));
     }
 
     private static void registerAssignmentCommands(CommandParser parser) {
+
+        parser.register(new Command(
+                "assign-role",
+                "Назначить роль пользователю\n" +
+                        "--user - имя пользователя\n" +
+                        "--role - название роли\n" +
+                        "--temp - дата истечения YYYY-MM-DD\n" +
+                        "--reason - причина назначения",
+                (scanner, rbacSystem, args) -> {
+
+                    var flagSignature = Map.of(
+                            "--user", 1,
+                            "--role", 1,
+                            "--temp", 1,
+                            "--reason", 1
+                    );
+
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+                    if (parsed == null) {
+                        System.out.println("error incorrect flags");
+                        return;
+                    }
+
+                    Function<String, Optional<String>> getFlag = key ->
+                            Optional.ofNullable(parsed.flags().get(key)).map(List::getFirst);
+
+                    String username = getFlag.apply("--user").orElse(null);
+                    String roleName = getFlag.apply("--role").orElse(null);
+
+                    if (username == null || roleName == null) {
+                        System.out.println("Error: Username and Role must exist");
+                        return;
+                    }
+
+                    var userOpt = rbacSystem.getUserManager().findByUsername(username);
+                    if (userOpt.isEmpty()) {
+                        System.out.println("User don't found");
+                        return;
+                    }
+
+                    var roleOpt = rbacSystem.getRoleManager().findByName(roleName);
+                    if (roleOpt.isEmpty()) {
+                        System.out.println("Role don't found");
+                        return;
+                    }
+
+                    var user = userOpt.get();
+                    var role = roleOpt.get();
+
+                    if (rbacSystem.getAssignmentManager().userHasRole(user, role)) {
+                        System.out.println("User already has a role");
+                        return;
+                    }
+
+                    String reason = getFlag.apply("--reason").orElse("For no reason");
+                    var meta = AssignmentMetadata.now(rbacSystem.getCurrentUser(), reason);
+
+                    RoleAssignment assignment;
+
+                    var tempData = getFlag.apply("--temp");
+                    if (tempData.isPresent()) {
+                        assignment = new TemporaryAssignment(user, role, meta, tempData.get(), false);
+                        System.out.println("Added temporary assignment");
+                    }
+                }
+                ));
+
+        parser.register(new Command(
+                "revoke-role",
+                "Отозвать роль у пользователя\n" +
+                        "--user - имя пользователя\n" +
+                        "--role - название роли",
+                (scanner, system, args) -> {
+
+                    var flagSignature = Map.of(
+                            "--user", 1,
+                            "--role", 1
+                    );
+
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    java.util.function.Function<String, java.util.Optional<String>> getFlag = key ->
+                            java.util.Optional.ofNullable(parsed.flags().get(key)).map(List::getFirst);
+
+                    String username = getFlag.apply("--user").orElse(null);
+                    String roleName = getFlag.apply("--role").orElse(null);
+
+                    if (username == null || roleName == null) {
+                        System.out.println("Ошибка: --user и --role обязательны");
+                        return;
+                    }
+
+                    var userOpt = system.getUserManager().findByUsername(username);
+                    if (userOpt.isEmpty()) {
+                        System.out.println("Пользователь не найден: " + username);
+                        return;
+                    }
+
+                    var user = userOpt.get();
+
+                    var assignments = system.getAssignmentManager().findByUser(user);
+                    var assignmentOpt = assignments.stream()
+                            .filter(a -> a.role().getName().equalsIgnoreCase(roleName) && a.isActive())
+                            .findFirst();
+
+                    if (assignmentOpt.isEmpty()) {
+                        System.out.println("У пользователя нет активной роли: " + roleName);
+                        return;
+                    }
+
+                    var assignment = assignmentOpt.get();
+                    system.getAssignmentManager().revokeAssignment(assignment.assignmentId());
+                    System.out.println("Роль " + roleName + " отозвана у пользователя " + username);
+                }
+        ));
+
 
     }
 
