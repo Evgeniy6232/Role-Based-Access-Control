@@ -20,7 +20,7 @@ public class CommandParser {
 
         Command command = commands.get(commandName);
         if (command == null) {
-            System.out.println("Command dont found " + commandName);
+            System.out.println("Command don't found " + commandName);
             return;
         }
 

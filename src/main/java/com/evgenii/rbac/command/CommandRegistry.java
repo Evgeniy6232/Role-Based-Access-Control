@@ -902,6 +902,57 @@ public class CommandRegistry {
 
     private static void registerUtilityCommands(CommandParser parser) {
 
+
+        parser.register(new Command(
+                "help",
+                "Show all commands",
+                (scanner, rbacSystem, args) -> {
+                    parser.printHelp();
+                }
+        ));
+
+        parser.register(new Command(
+                "stats",
+                "Статистика системы",
+                (scanner, system, args) -> {
+
+                    int users = system.getUserManager().count();
+                    int roles = system.getRoleManager().count();
+                    int total = system.getAssignmentManager().count();
+                    int active = system.getAssignmentManager().getActiveAssignments().size();
+                    int expired = system.getAssignmentManager().getExpiredAssignments().size();
+
+                    System.out.println("\nСтатистика:");
+                    System.out.printf("Users: %d | Roles: %d%n", users, roles);
+                    System.out.printf("Assignments: %d total | %d active | %d expired%n", total, active, expired);
+                    System.out.printf("Avg roles/user: %.2f%n", users > 0 ? (double) total / users : 0);
+                }
+        ));
+
+        parser.register(new Command("clear", "Clear screen", (scanner, system, args) -> {
+            System.out.print("\033[H\033[2J");
+            System.out.flush();
+        }));
+
+        parser.register(new Command("exit", "Exit the program",
+                (scanner, system, args) -> {
+
+                    System.out.print("Are you want to exit? (y/n): ");
+                    String confirm = scanner.nextLine().toLowerCase();
+
+                    switch (confirm) {
+                        case "y":
+                        case "yes":
+                        case "да":
+                            System.out.println("Goodbye!");
+                            System.exit(0);
+                            break;
+
+                        default:
+                            System.out.println("Exit cancelled");
+                    }
+                }
+        ));
     }
 
     private static void ArgumentError() {
