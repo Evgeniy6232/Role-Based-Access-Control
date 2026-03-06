@@ -719,12 +719,185 @@ public class CommandRegistry {
         }
         ));
 
+        parser.register(new Command(
+                "assignment",
+                "Управление назначениями\n" +
+                        "--list --active - показать активные\n" +
+                        "--list --inactive - показать неактивные\n" +
+                        "--extend --username <name> --role <role> --date <YYYY-MM-DD> - продлить",
+                (scanner, system, args) -> {
+
+                    var flagSignature = Map.of(
+                            "--list", 0,
+                            "--extend", 0,
+                            "--active", 0,
+                            "--inactive", 0,
+                            "--username", 1,
+                            "--role", 1,
+                            "--date", 1
+                    );
+
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+                    if (parsed == null) {
+                        ArgumentError();
+                        System.out.println("  assignment --extend --username <name> --role <role> --date <YYYY-MM-DD>");
+                        return;
+                    }
+
+                    java.util.function.Function<String, java.util.Optional<String>> getFlag = key ->
+                            java.util.Optional.ofNullable(parsed.flags().get(key)).map(List::getFirst);
+
+                    if (parsed.flags().containsKey("--extend")) {
+                        String username = getFlag.apply("--username").orElse(null);
+                        String roleName = getFlag.apply("--role").orElse(null);
+                        String newDate = getFlag.apply("--date").orElse(null);
+
+                        if (username == null || roleName == null || newDate == null) {
+                            System.out.println("Error: Username, Role and newDate must exist");
+                            return;
+                        }
+
+                        var userOpt = system.getUserManager().findByUsername(username);
+                        if (userOpt.isEmpty()) {
+                            System.out.println("User don't exist");
+                            return;
+                        }
+
+                        var assignments = system.getAssignmentManager().findByUser(userOpt.get());
+                        var assignmentOpt = assignments.stream()
+                                .filter(a -> a.role().getName().equalsIgnoreCase(roleName))
+                                .filter(a -> a instanceof com.evgenii.rbac.assignment.TemporaryAssignment)
+                                .findFirst();
+
+                        if (assignmentOpt.isEmpty()) {
+                            System.out.println("No time assignment found ");
+                            return;
+                        }
+
+                        try {
+                            system.getAssignmentManager().extendTemporaryAssignment(assignmentOpt.get().assignmentId(), newDate);
+                            System.out.println("Assignment extend" + newDate);
+                        } catch (Exception e) {
+                            System.out.println("error: " + e.getMessage());
+                        }
+                        return;
+                    }
+
+                    if (parsed.flags().containsKey("--list")) {
+                        var assignments = system.getAssignmentManager().findAll().stream();
+
+                        if (parsed.flags().containsKey("--active")) {
+                            assignments = assignments.filter(RoleAssignment::isActive);
+                        }
+                        if (parsed.flags().containsKey("--inactive")) {
+                            assignments = assignments.filter(a -> !a.isActive());
+                        }
+
+                        var result = assignments.toList();
+                        if (result.isEmpty()) {
+                            System.out.println("No assignment");
+                            return;
+                        }
+
+                        System.out.println("\nAssignments list:");
+                        for (var a : result) {
+                            String type = a instanceof com.evgenii.rbac.assignment.TemporaryAssignment ? "TEMPORARY" : "PERMANENT";
+                            String status = a.isActive() ? "ACTIVE" : "INACTIVE";
+                            System.out.printf("[%s] %s -> %s | %s | %s%n  %s%n",
+                                    a.assignmentId(), a.user().username(), a.role().getName(), type, status, a.metadata().format());
+                        }
+                    }
+                }
+        ));
 
 
     }
 
     private static void registerPermissionCommands(CommandParser parser) {
 
+        parser.register(new Command(
+                "permissions-user",
+                "All permissions user --user <username>",
+                (scanner, system, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Map.of("--user", 1)).orElse(null);
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String username = parsed.flags().get("--user").getFirst();
+                    var userOpt = system.getUserManager().findByUsername(username);
+                    if (userOpt.isEmpty()) {
+                        System.out.println("User don't exist");
+                        return;
+                    }
+
+                    var permissions = system.getAssignmentManager().getUserPermissions(userOpt.get());
+                    if (permissions.isEmpty()) {
+                        System.out.println("No permissions");
+                        return;
+                    }
+
+                    System.out.println("\n Permissions " + username + ":");
+
+                    Map<String, List<Permission>> byResource = new HashMap<>();
+                    permissions.forEach(p -> byResource.computeIfAbsent(p.resource(), k -> new ArrayList<>()).add(p));
+
+                    byResource.forEach((resource, perms) -> {
+                        System.out.println("\n" + resource + ":");
+                        perms.forEach(p -> System.out.println("  " + p.name()));
+                    });
+                }
+        ));
+
+        parser.register(new Command(
+                "permission-check",
+                "Check permission",
+                (scanner, rbacSystem, args) -> {
+
+                    var flagSignature = Map.of(
+                            "--user", 1,
+                            "--permission", 1,
+                            "--resource", 1
+                    );
+
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String username = parsed.flags().get("--user").getFirst();
+                    String permName = parsed.flags().get("--permission").getFirst();
+                    String resource = parsed.flags().get("--resource").getFirst();
+
+                    var userOpt = rbacSystem.getUserManager().findByUsername(username);
+                    if (userOpt.isEmpty()) {
+                        System.out.println("User don't exist");
+                        return;
+                    }
+
+                    var user = userOpt.get();
+                    boolean has = rbacSystem.getAssignmentManager().userHasPermission(user, permName, resource);
+
+                    if (has) {
+                        System.out.println("Permission exist");
+
+                        for (var a : rbacSystem.getAssignmentManager().findByUser(user)) {
+                            if (a.isActive()) {
+                                for (var p : a.role().getPermissions()) {
+                                    if (p.name().equalsIgnoreCase(permName) && p.resource().equalsIgnoreCase(resource)) {
+                                        System.out.println(a.role().getName());
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        System.out.println("Permission don't exist");
+                    }
+                }
+        ));
     }
 
     private static void registerUtilityCommands(CommandParser parser) {
