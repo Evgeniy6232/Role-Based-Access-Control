@@ -7,7 +7,9 @@ import com.evgenii.rbac.model.AssignmentMetadata;
 import com.evgenii.rbac.model.Permission;
 import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
+import jdk.swing.interop.SwingInterOpUtils;
 
+import javax.xml.crypto.dsig.spec.XSLTTransformParameterSpec;
 import java.util.*;
 import java.util.function.Function;
 import java.util.logging.ErrorManager;
@@ -663,6 +665,60 @@ public class CommandRegistry {
                     System.out.println("Роль " + roleName + " отозвана у пользователя " + username);
                 }
         ));
+
+        parser.register(new Command(
+                "assignment-list-user",
+                "Assignment list user",
+                (scanner, rbacSystem, args) -> {
+
+                    var parsed = CommandParser.parseArgs(args, Map.of("--user", 1)).orElse(null);
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    String username = parsed.flags().get("--user").getFirst();
+                    var userOpt = rbacSystem.getUserManager().findByUsername(username);
+                    if (userOpt.isEmpty()) {
+                        System.out.println("USer don't exist");
+                        return;
+                    }
+
+                    var assignments = rbacSystem.getAssignmentManager().findByUser(userOpt.get());
+                    if (assignments.isEmpty()) {
+                        System.out.println("User don't have assignments");
+                        return;
+                    }
+
+                    System.out.println("Assignments " + username + " :");
+                    for (var a : assignments) {
+                        String type = a instanceof TemporaryAssignment ? "TEMPORARY" : "PERMANENT";
+
+                        String status = a.isActive() ? "ACTIVE" : "NOT ACTIVE";
+                        System.out.printf("[%s] %s | %s | %s%n  %s%n",
+                                a.assignmentId(), a.role().getName(), type, status, a.metadata().format());
+                    }
+
+                }
+        ));
+
+        parser.register(new Command("assignment-list", "Список всех назначений", (scanner, system, args) -> {
+
+            var assignments = system.getAssignmentManager().findAll();
+            if (assignments.isEmpty()) {
+                System.out.println("Нет назначений");
+                return;
+            }
+
+            System.out.println("\nВсе назначения:");
+            for (var a : assignments) {
+                String type = a instanceof com.evgenii.rbac.assignment.TemporaryAssignment ? "TEMPORARY" : "PERMANENT";
+                String status = a.isActive() ? "ACTIVE" : "INACTIVE";
+                System.out.printf("[%s] %s -> %s | %s | %s%n  %s%n", a.assignmentId(), a.user().username(), a.role().getName(), type, status, a.metadata().format());
+            }
+        }
+        ));
+
 
 
     }
