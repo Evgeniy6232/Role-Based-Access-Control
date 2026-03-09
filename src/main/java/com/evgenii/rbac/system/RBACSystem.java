@@ -6,6 +6,7 @@ import com.evgenii.rbac.model.Permission;
 import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
 import com.evgenii.rbac.repository.*;
+import com.evgenii.rbac.util.AuditLog;
 
 public class RBACSystem {
 
@@ -13,17 +14,20 @@ public class RBACSystem {
     private final RoleManager roleManager;
     private final AssignmentManager assignmentManager;
     private String currentUser;
+    private final AuditLog auditLog;
 
     public RBACSystem() {
         this.userManager = new UserManager();
         this.roleManager = new RoleManager();
         this.assignmentManager = new AssignmentManager(userManager, roleManager);
         this.currentUser = "system";
+        this.auditLog = new AuditLog();
     }
 
     public UserManager getUserManager() { return userManager; }
     public RoleManager getRoleManager() { return roleManager; }
     public AssignmentManager getAssignmentManager() { return assignmentManager; }
+    public AuditLog getAuditLog() { return auditLog; }
 
     public String getCurrentUser() { return currentUser; }
     public void setCurrentUser (String username) {

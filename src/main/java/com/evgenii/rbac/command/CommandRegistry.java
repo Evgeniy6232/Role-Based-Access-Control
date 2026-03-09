@@ -1,5 +1,6 @@
 package com.evgenii.rbac.command;
 
+import com.evgenii.rbac.assignment.PermanentAssignment;
 import com.evgenii.rbac.assignment.RoleAssignment;
 import com.evgenii.rbac.assignment.TemporaryAssignment;
 import com.evgenii.rbac.filter.UserFilters;
@@ -7,8 +8,7 @@ import com.evgenii.rbac.model.AssignmentMetadata;
 import com.evgenii.rbac.model.Permission;
 import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
-import jdk.swing.interop.SwingInterOpUtils;
-
+import com.evgenii.rbac.util.*;
 import javax.xml.crypto.dsig.spec.XSLTTransformParameterSpec;
 import java.util.*;
 import java.util.function.Function;
@@ -100,6 +100,8 @@ public class CommandRegistry {
 
                     User user = new User(username, fullname, email);
                     rbacSystem.getUserManager().add(user);
+
+                    rbacSystem.getAuditLog().log("CREATE_USER", rbacSystem.getCurrentUser(), username, "Created user: " + fullname);
 
                     System.out.println("User " + username + " create");
                 })
@@ -215,6 +217,9 @@ public class CommandRegistry {
                     }
 
                     rbacSystem.getUserManager().remove(user);
+
+                    rbacSystem.getAuditLog().log("DELETE_USER", rbacSystem.getCurrentUser(), username, "Deleted user with " + countRemove + " assignments");
+
                     System.out.println("User '" + username + "' remove\n");
                     System.out.println("Assignment delete: " + countRemove);
                 }
@@ -304,6 +309,8 @@ public class CommandRegistry {
                         }
                     }
 
+                    rbacSystem.getAuditLog().log("CREATE_ROLE", rbacSystem.getCurrentUser(), roleName, "Created role: " + description);
+
                     System.out.println(role.format());
                 })
         ));
@@ -390,6 +397,9 @@ public class CommandRegistry {
                         }
                     }
                     rbacSystem.getRoleManager().remove(role);
+
+                    rbacSystem.getAuditLog().log("DELETE_ROLE", rbacSystem.getCurrentUser(), roleName, "Deleted role");
+
                     System.out.println("Role '" + roleName + "' deleted");
                 })
         ));
@@ -432,7 +442,7 @@ public class CommandRegistry {
                     try {
                         Permission permission = new Permission(permName, resource, description);
                         rbacSystem.getRoleManager().addPermissionToRole(roleName, permission);
-                        System.out.println("Permisiion '" + permName + "'  added for role");
+                        System.out.println("Permission '" + permName + "'  added for role");
                     } catch (IllegalArgumentException e) {
                         System.out.println("error " + e.getMessage());
                     }
@@ -608,7 +618,17 @@ public class CommandRegistry {
                     var tempData = getFlag.apply("--temp");
                     if (tempData.isPresent()) {
                         assignment = new TemporaryAssignment(user, role, meta, tempData.get(), false);
+
+                        rbacSystem.getAuditLog().log("ASSIGN_ROLE", rbacSystem.getCurrentUser(), username, "Assigned temporary role " + roleName + " until " + tempData.get());
+
                         System.out.println("Added temporary assignment");
+                    } else {
+                        assignment = new PermanentAssignment(user, role, meta);
+                        rbacSystem.getAssignmentManager().add(assignment);
+
+                        rbacSystem.getAuditLog().log("ASSIGN_ROLE", rbacSystem.getCurrentUser(), username, "Assigned permanent role " + roleName);
+
+                        System.out.println("Added permanent assignment");
                     }
                 }
                 ));
@@ -662,6 +682,9 @@ public class CommandRegistry {
 
                     var assignment = assignmentOpt.get();
                     system.getAssignmentManager().revokeAssignment(assignment.assignmentId());
+
+                    system.getAuditLog().log("REVOKE_ROLE", system.getCurrentUser(), username, "Revoked role " + roleName);
+
                     System.out.println("Роль " + roleName + " отозвана у пользователя " + username);
                 }
         ));
@@ -951,6 +974,24 @@ public class CommandRegistry {
                         default:
                             System.out.println("Exit cancelled");
                     }
+                }
+        ));
+
+        parser.register(new Command(
+                "audit-log",
+                "Show audit log",
+                (scanner, rbacSystem, args) -> {
+                    rbacSystem.getAuditLog().printLog();
+                }
+        ));
+
+        parser.register(new Command(
+                "audit-save",
+                "Save audit log to file",
+                (scanner, rbacSystem, args) -> {
+                    System.out.print("Enter filename: ");
+                    String filename = scanner.nextLine();
+                    rbacSystem.getAuditLog().saveToFile(filename);
                 }
         ));
     }
