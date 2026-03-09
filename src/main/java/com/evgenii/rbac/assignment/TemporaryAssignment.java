@@ -8,14 +8,18 @@ import java.time.LocalDateTime;
 
 public class TemporaryAssignment extends AbstractRoleAssignment {
 
-    private String expiresAx;
-    private boolean autoRenew;
+    private String expiresAt;
+    private final boolean autoRenew;
+
+    public String getExpiresAt() {  // ← ДОБАВИТЬ ЭТОТ МЕТОД
+        return expiresAt;
+    }
 
     public TemporaryAssignment (User user, Role role, AssignmentMetadata metadata,
                                 String expiresAx, boolean autoRenew) {
 
         super(user, role, metadata);
-        this.expiresAx = expiresAx;
+        this.expiresAt = expiresAx;
         this.autoRenew = autoRenew;
     }
 
@@ -30,17 +34,17 @@ public class TemporaryAssignment extends AbstractRoleAssignment {
     }
 
     public void extend(String newExpirationDate) {
-        this.expiresAx = newExpirationDate;
+        this.expiresAt = newExpirationDate;
     }
 
     public boolean isExpired() {
         String compareData = LocalDateTime.now().toString();
-        return compareData.compareTo(expiresAx) > 0;
+        return compareData.compareTo(expiresAt) > 0;
     }
 
     @Override
     public String summary() {
-        return super.summary() + "\n Expired: " + expiresAx + "\n AutoRenew: " + autoRenew;
+        return super.summary() + "\n Expired: " + expiresAt + "\n AutoRenew: " + autoRenew;
     }
 
     public static void main(String[] args) {
