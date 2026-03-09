@@ -1,32 +1,52 @@
 package com.evgenii.rbac.model;
+import com.evgenii.rbac.util.ValidationUtils;
 
 public record User(String username, String fullname, String email) {
 
-    public User{
+//    public User{
+//
+//        if (username == null || username.isBlank()) {
+//            throw new IllegalArgumentException("The username field cannot be empty");
+//        }
+//
+//        if (fullname == null || fullname.isBlank()) {
+//            throw new IllegalArgumentException("The fullname field cannot be empty");
+//        }
+//
+//        if (email == null || email.isBlank()) {
+//            throw new IllegalArgumentException("The email field cannot be empty");
+//        }
+//
+//
+//        String usernamePattern = "^[a-zA-Z0-9]{3,20}$";
+//        if (!username.matches(usernamePattern)) {
+//            throw new IllegalArgumentException("Username doesn`t matches pattern");
+//        }
+//
+//        String emailPattern = "^[\\w-.]+@[\\w-]+\\.[a-z]{2,4}$";
+//        if (!email.matches(emailPattern)) {
+//            throw new IllegalArgumentException("Email doesn`t matches pattern");
+//        }
+//
+//    }
 
-        if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("The username field cannot be empty");
+    public User(String username, String fullname, String email) {
+
+        ValidationUtils.requireNonEmpty(username, "Username");
+        ValidationUtils.requireNonEmpty(fullname, "Full name");
+        ValidationUtils.requireNonEmpty(email, "Email");
+
+        if (!ValidationUtils.isValidUsername(username)) {
+            throw new IllegalArgumentException("Username doesn`t match pattern");
         }
 
-        if (fullname == null || fullname.isBlank()) {
-            throw new IllegalArgumentException("The fullname field cannot be empty");
+        if (!ValidationUtils.isValidEmail(email)) {
+            throw new IllegalArgumentException("Email doesn`t match pattern");
         }
 
-        if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("The email field cannot be empty");
-        }
-
-
-        String usernamePattern = "^[a-zA-Z0-9]{3,20}$";
-        if (!username.matches(usernamePattern)) {
-            throw new IllegalArgumentException("Username doesn`t matches pattern");
-        }
-
-        String emailPattern = "^[\\w-.]+@[\\w-]+\\.[a-z]{2,4}$";
-        if (!email.matches(emailPattern)) {
-            throw new IllegalArgumentException("Email doesn`t matches pattern");
-        }
-
+        this.username = username;
+        this.email = email;
+        this.fullname = ValidationUtils.normalizeString(fullname);
     }
 
     public static User validate(String username, String fullname, String email){

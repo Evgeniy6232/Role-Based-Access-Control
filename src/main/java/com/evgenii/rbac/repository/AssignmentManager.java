@@ -4,6 +4,7 @@ import com.evgenii.rbac.assignment.*;
 import com.evgenii.rbac.filter.*;
 import com.evgenii.rbac.model.*;
 import com.evgenii.rbac.sorter.*;
+import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
 
@@ -13,13 +14,13 @@ public class AssignmentManager implements Repository<RoleAssignment> {
     private UserManager userManager;
     private RoleManager roleManager;
 
-    public AssignmentManager (UserManager userManager, RoleManager roleManager) {
+    public AssignmentManager(UserManager userManager, RoleManager roleManager) {
         this.userManager = userManager;
         this.roleManager = roleManager;
     }
 
     private boolean isDuplicateActiveAssignment(RoleAssignment newAssignment) {
-        for(RoleAssignment existing : assignments.values()) {
+        for (RoleAssignment existing : assignments.values()) {
             if (existing.user().equals(newAssignment.user()) && existing.role().equals(newAssignment.role()) &&
                     existing.isActive()) {
                 return true;
@@ -34,16 +35,19 @@ public class AssignmentManager implements Repository<RoleAssignment> {
             throw new IllegalArgumentException("Assignment cannot be null");
         }
 
+        ValidationUtils.requireNonEmpty(assignment.user().username(), "Username");
+        ValidationUtils.requireNonEmpty(assignment.role().getName(), "Role name");
+
         if (!userManager.exists(assignment.user().username())) {
-            throw new IllegalArgumentException("com.evgenii.rbac.model.User does not exists");
+            throw new IllegalArgumentException("User does not exist");
         }
 
         if (!roleManager.exists(assignment.role().getName())) {
-            throw new IllegalArgumentException("com.evgenii.rbac.model.Role does not exists");
+            throw new IllegalArgumentException("Role does not exist");
         }
 
         if (isDuplicateActiveAssignment(assignment)) {
-            throw new IllegalArgumentException("com.evgenii.rbac.model.User already has this active role");
+            throw new IllegalArgumentException("User already has this active role");
         }
 
         assignments.put(assignment.assignmentId(), assignment);
@@ -85,7 +89,7 @@ public class AssignmentManager implements Repository<RoleAssignment> {
     public List<RoleAssignment> findByUser(User user) {
         List<RoleAssignment> result = new ArrayList<>();
         for (RoleAssignment a : assignments.values()) {
-            if (a.user().equals(user)){
+            if (a.user().equals(user)) {
                 result.add(a);
             }
         }
@@ -134,13 +138,13 @@ public class AssignmentManager implements Repository<RoleAssignment> {
     }
 
     public boolean userHasRole(User user, Role role) {
-            for (RoleAssignment a : assignments.values()) {
-                if (a.user().equals(user) && a.role().equals(role) && a.isActive()) {
-                    return true;
-                }
+        for (RoleAssignment a : assignments.values()) {
+            if (a.user().equals(user) && a.role().equals(role) && a.isActive()) {
+                return true;
             }
+        }
 
-            return false;
+        return false;
     }
 
     public Set<Permission> getUserPermissions(User user) {

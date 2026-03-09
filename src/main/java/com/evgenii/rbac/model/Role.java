@@ -1,4 +1,5 @@
 package com.evgenii.rbac.model;
+import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -13,14 +14,23 @@ public class Role {
     private Set<Permission> permissions;
 
 
+//    public Role(String name, String description) {
+//
+//        this.id = UUID.randomUUID().toString();
+//
+//        if (name == null || name.isBlank()) {
+//            throw new IllegalArgumentException("com.evgenii.rbac.model.Role name cannot empty");
+//        }
+//
+//        this.name = name;
+//        this.description = description;
+//        this.permissions = new HashSet<>();
+//    }
+
     public Role(String name, String description) {
+        ValidationUtils.requireNonEmpty(name, "Role name");
 
         this.id = UUID.randomUUID().toString();
-
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("com.evgenii.rbac.model.Role name cannot empty");
-        }
-
         this.name = name;
         this.description = description;
         this.permissions = new HashSet<>();

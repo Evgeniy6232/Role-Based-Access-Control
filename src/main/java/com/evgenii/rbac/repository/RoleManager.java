@@ -3,6 +3,7 @@ package com.evgenii.rbac.repository;
 import com.evgenii.rbac.filter.RoleFilter;
 import com.evgenii.rbac.model.Permission;
 import com.evgenii.rbac.model.Role;
+import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
 
@@ -14,11 +15,13 @@ public class RoleManager implements Repository<Role> {
     @Override
     public void add(Role role) {
         if (role == null) {
-            throw new IllegalArgumentException("Roll cannot by null");
+            throw new IllegalArgumentException("Role cannot be null");
         }
 
+        ValidationUtils.requireNonEmpty(role.getName(), "Role name");
+
         if (rolesByName.containsKey(role.getName())) {
-            throw new IllegalArgumentException("com.evgenii.rbac.model.Role with name <" + role.getName() + "> already exists");
+            throw new IllegalArgumentException("Role with name <" + role.getName() + "> already exists");
         }
 
         rolesById.put(role.getId(), role);
@@ -39,7 +42,7 @@ public class RoleManager implements Repository<Role> {
 
     @Override
     public Optional<Role> findById(String id) {
-        if (id == null || id.isBlank()){
+        if (id == null || id.isBlank()) {
             return Optional.empty();
         }
 
@@ -88,7 +91,7 @@ public class RoleManager implements Repository<Role> {
         return result;
     }
 
-    public boolean exists (String name) {
+    public boolean exists(String name) {
         return rolesByName.containsKey(name);
     }
 

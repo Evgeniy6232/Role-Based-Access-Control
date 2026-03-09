@@ -1,25 +1,41 @@
 package com.evgenii.rbac.model;
 
+import com.evgenii.rbac.util.ValidationUtils;
+
 public record Permission(String name, String resource, String description) {
 
+    //    public Permission(String name, String resource, String description) {
+//
+//        String normalizedName = name.toUpperCase();
+//        if (normalizedName.contains(" ")) {
+//            throw new IllegalArgumentException("Name cannot contain space");
+//        }
+//
+//        String normalizedResource = resource.toLowerCase();
+//        if (description == null || description.isBlank()) {
+//            throw new IllegalArgumentException("Description field cannot be empty");
+//        }
+//
+//        this.name = normalizedName;
+//        this.resource = normalizedResource;
+//        this.description = description;
+//    }
     public Permission(String name, String resource, String description) {
+        ValidationUtils.requireNonEmpty(name, "Name");
+        ValidationUtils.requireNonEmpty(resource, "Resource");
+        ValidationUtils.requireNonEmpty(description, "Description");
 
         String normalizedName = name.toUpperCase();
         if (normalizedName.contains(" ")) {
             throw new IllegalArgumentException("Name cannot contain space");
         }
 
-        String normalizedResource = resource.toLowerCase();
-        if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Description field cannot be empty");
-        }
-
         this.name = normalizedName;
-        this.resource = normalizedResource;
+        this.resource = resource.toLowerCase();
         this.description = description;
     }
 
-    public String format(){
+    public String format() {
         return String.format("%s on %s: %s", name, resource, description);
     }
 
@@ -34,7 +50,7 @@ public record Permission(String name, String resource, String description) {
         }
 
         boolean resourceMatches;
-        if(resourcePattern == null || resourcePattern.isBlank()) {
+        if (resourcePattern == null || resourcePattern.isBlank()) {
             resourceMatches = true;
         } else {
             resourceMatches = this.resource.contains(resourcePattern);
