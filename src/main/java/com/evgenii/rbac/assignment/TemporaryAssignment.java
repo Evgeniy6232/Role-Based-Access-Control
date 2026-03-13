@@ -3,6 +3,7 @@ package com.evgenii.rbac.assignment;
 import com.evgenii.rbac.model.AssignmentMetadata;
 import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
+import com.evgenii.rbac.util.DateUtils;
 
 import java.time.LocalDateTime;
 
@@ -11,15 +12,15 @@ public class TemporaryAssignment extends AbstractRoleAssignment {
     private String expiresAt;
     private final boolean autoRenew;
 
-    public String getExpiresAt() {  // ← ДОБАВИТЬ ЭТОТ МЕТОД
+    public String getExpiresAt() {
         return expiresAt;
     }
 
     public TemporaryAssignment (User user, Role role, AssignmentMetadata metadata,
-                                String expiresAx, boolean autoRenew) {
+                                String expiresAt, boolean autoRenew) {
 
         super(user, role, metadata);
-        this.expiresAt = expiresAx;
+        this.expiresAt = expiresAt;
         this.autoRenew = autoRenew;
     }
 
@@ -37,9 +38,13 @@ public class TemporaryAssignment extends AbstractRoleAssignment {
         this.expiresAt = newExpirationDate;
     }
 
+//    public boolean isExpired() {
+//        String compareData = LocalDateTime.now().toString();
+//        return compareData.compareTo(expiresAt) > 0;
+//    }
+
     public boolean isExpired() {
-        String compareData = LocalDateTime.now().toString();
-        return compareData.compareTo(expiresAt) > 0;
+        return DateUtils.isBefore(expiresAt, DateUtils.getCurrentDate());
     }
 
     @Override

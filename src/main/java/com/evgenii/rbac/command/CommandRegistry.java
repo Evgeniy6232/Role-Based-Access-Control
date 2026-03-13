@@ -62,10 +62,18 @@ public class CommandRegistry {
                         return;
                     }
 
-                    System.out.println("Список пользователей: \n");
+//                    System.out.println("Список пользователей: \n");
+//                    for (User user : users) {
+//                        System.out.println(user.format());
+//                    }
+
+                    String[] headers = {"Username", "Full Name", "Email"};
+                    List<String[]> rows = new ArrayList<>();
                     for (User user : users) {
-                        System.out.println(user.format());
+                        rows.add(new String[]{user.username(), user.fullname(), user.email()});
                     }
+                    System.out.println(FormatUtils.formatHeader("User List"));
+                    System.out.println(FormatUtils.formatTable(headers, rows));
                 })
         ));
 
@@ -246,14 +254,27 @@ public class CommandRegistry {
                         return;
                     }
 
-                    System.out.println("----------Role list----------");
+//                    System.out.println("//Role list//");
+//                    for (Role role : roles) {
+//                        System.out.printf(" - %s | Assignments: &d | ID: %s%m",
+//                                role.getName(),
+//                                role.getPermissions().size(),
+//                                role.getId()
+//                        );
+//                    }
+
+                    String[] headers = {"Role", "Permissions", "ID"};
+                    List<String[]> rows = new ArrayList<>();
                     for (Role role : roles) {
-                        System.out.printf(" - %s | Assignments: &d | ID: %s%m",
+                        rows.add(new String[]{
                                 role.getName(),
-                                role.getPermissions().size(),
-                                role.getId()
-                        );
+                                String.valueOf(role.getPermissions().size()),
+                                FormatUtils.truncate(role.getId(), 8)
+                        });
                     }
+                    System.out.println(FormatUtils.formatHeader("Role List"));
+                    System.out.println(FormatUtils.formatTable(headers, rows));
+
                     System.out.println("All roles: " + roles.size());
 
 
@@ -945,10 +966,17 @@ public class CommandRegistry {
                     int active = system.getAssignmentManager().getActiveAssignments().size();
                     int expired = system.getAssignmentManager().getExpiredAssignments().size();
 
-                    System.out.println("\nСтатистика:");
+//                    System.out.println("\nСтатистика:");
+//                    System.out.printf("Users: %d | Roles: %d%n", users, roles);
+//                    System.out.printf("Assignments: %d total | %d active | %d expired%n", total, active, expired);
+//                    System.out.printf("Avg roles/user: %.2f%n", users > 0 ? (double) total / users : 0);
+
+                    String stats = String.format(" Users: %d | Roles: %d | Total: %d | Active: %d | Expired: %d ",
+                            users, roles, total, active, expired);
+                    System.out.println("<-----------Statistic system----------->");
+                    System.out.println(FormatUtils.formatHeader("Statistics"));
                     System.out.printf("Users: %d | Roles: %d%n", users, roles);
                     System.out.printf("Assignments: %d total | %d active | %d expired%n", total, active, expired);
-                    System.out.printf("Avg roles/user: %.2f%n", users > 0 ? (double) total / users : 0);
                 }
         ));
 
@@ -992,6 +1020,86 @@ public class CommandRegistry {
                     System.out.print("Enter filename: ");
                     String filename = scanner.nextLine();
                     rbacSystem.getAuditLog().saveToFile(filename);
+                }
+        ));
+
+        parser.register(new Command(
+                "report-users",
+                "View or save report-users" +
+                        "--save <filename> - save to file",
+                (scanner, rbacSystem, args) -> {
+
+                    var flagSignature = Map.of("--save", 1);
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    ReportGenerator generator = new ReportGenerator();
+                    String report = generator.generateUserReport(rbacSystem.getUserManager(), rbacSystem.getAssignmentManager());
+
+                    if (parsed.flags().containsKey("--save")) {
+
+                        String filename = parsed.flags().get("--save").getFirst();
+                        generator.exportToFile(report, filename);
+                    } else {
+                        System.out.println(report);
+                    }
+                }
+        ));
+
+        parser.register(new Command(
+                "report-roles",
+                "View or save report-roles" +
+                        "--save <filename> - save to file",
+                (scanner, rbacSystem, args) -> {
+
+                    var flagSignature = Map.of("--save", 1);
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    ReportGenerator generator = new ReportGenerator();
+                    String report = generator.generateRoleReport(rbacSystem.getRoleManager(), rbacSystem.getAssignmentManager());
+
+                    if (parsed.flags().containsKey("--save")) {
+
+                        String filename = parsed.flags().get("--save").getFirst();
+                        generator.exportToFile(report, filename);
+                    } else {
+                        System.out.println(report);
+                    }
+                }
+        ));
+
+        parser.register(new Command(
+                "report-matrix",
+                "Permission matrix\n" +
+                        "  --save <filename> - save to file",
+                (scanner, system, args) -> {
+
+                    var flagSignature = Map.of("--save", 1);
+                    var parsed = CommandParser.parseArgs(args, flagSignature).orElse(null);
+
+                    if (parsed == null) {
+                        ArgumentError();
+                        return;
+                    }
+
+                    ReportGenerator generator = new ReportGenerator();
+                    String report = generator.generatePermissionMatrix(system.getUserManager(), system.getAssignmentManager());
+
+                    if (parsed.flags().containsKey("--save")) {
+                        String filename = parsed.flags().get("--save").getFirst();
+                        generator.exportToFile(report, filename);
+                    } else {
+                        System.out.println(report);
+                    }
                 }
         ));
     }
