@@ -47,11 +47,13 @@ public class FormatUtils {
 
     public static String padRight(String text, int length){
         if (text == null) return " ";
+        if (text.length() >= length) return text;
         return text + " ".repeat(length - text.length());
     }
 
     public static String padLeft(String text, int length){
         if (text == null) return " ";
+        if (text.length() >= length) return text;
         return " ".repeat(length - text.length()) + text;
     }
 }

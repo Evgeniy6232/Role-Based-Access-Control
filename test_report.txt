@@ -1,0 +1,9 @@
+<----------USER REPORT---------->
+
+misha (misha) <misha@mail.ru>
+  - USER [PERMANENT] ACTIVE
+
+genna (gennaqq) <genna@mail.com>
+  - ADMIN [PERMANENT] ACTIVE
+
+Total: 2
