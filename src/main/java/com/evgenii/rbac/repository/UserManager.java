@@ -6,6 +6,7 @@ import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class UserManager implements Repository<User> {
 
@@ -124,5 +125,15 @@ public class UserManager implements Repository<User> {
 
         User updated = new User(username, newFullName, newEmail);
         users.put(username, updated);
+    }
+
+    // Параллельная фильтрация пользователей
+    public List<User> findByFilterParallel(UserFilter filter) {
+        if (filter == null) {
+            return new ArrayList<>();
+        }
+        return users.values().parallelStream()
+                .filter(filter::test)
+                .collect(Collectors.toList());
     }
 }

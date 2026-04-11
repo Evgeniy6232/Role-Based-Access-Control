@@ -8,6 +8,7 @@ import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class AssignmentManager implements Repository<RoleAssignment> {
 
@@ -225,6 +226,16 @@ public class AssignmentManager implements Repository<RoleAssignment> {
 
         am.revokeAssignment(pa.assignmentId());
         System.out.println(am.getActiveAssignments().size());
+    }
+
+    // Параллельная фильтрация назначений
+    public List<RoleAssignment> findByFilterParallel(AssignmentFilter filter) {
+        if (filter == null) {
+            return new ArrayList<>();
+        }
+        return assignments.values().parallelStream()
+                .filter(filter::test)
+                .collect(Collectors.toList());
     }
 
 }

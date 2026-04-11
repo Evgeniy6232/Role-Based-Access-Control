@@ -7,6 +7,7 @@ import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class RoleManager implements Repository<Role> {
 
@@ -144,5 +145,15 @@ public class RoleManager implements Repository<Role> {
 
         List<Role> withPermission = manager.findRolesWithPermission("READ", "users");
         System.out.println(withPermission.size());
+    }
+
+    // Параллельная фильтрация ролей
+    public List<Role> findByFilterParallel(RoleFilter filter) {
+        if (filter == null) {
+            return new ArrayList<>();
+        }
+        return rolesById.values().parallelStream()
+                .filter(filter::test)
+                .collect(Collectors.toList());
     }
 }
