@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Role-Based-Access-Control.iml" filepath="$PROJECT_DIR$/Role-Based-Access-Control.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Role-Based-Access-Control.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Role-Based-Access-Control.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Role-Based-Access-Control.test.iml" filepath="$PROJECT_DIR$/.idea/modules/Role-Based-Access-Control.test.iml" />
     </modules>
   </component>
 </project>

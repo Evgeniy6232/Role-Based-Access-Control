@@ -5,10 +5,11 @@ import com.evgenii.rbac.filter.*;
 import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UserManager implements Repository<User> {
 
-    private Map<String, User> users = new HashMap<>();
+    private ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>();
 
     @Override
     public void add(User user) {

@@ -6,14 +6,15 @@ import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RoleManager implements Repository<Role> {
 
-    private Map<String, Role> rolesById = new HashMap<>();
-    private Map<String, Role> rolesByName = new HashMap<>();
+    private ConcurrentHashMap<String, Role> rolesById = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Role> rolesByName = new ConcurrentHashMap<>();
 
     @Override
-    public void add(Role role) {
+    public synchronized void add(Role role) {
         if (role == null) {
             throw new IllegalArgumentException("Role cannot be null");
         }
@@ -29,7 +30,7 @@ public class RoleManager implements Repository<Role> {
     }
 
     @Override
-    public boolean remove(Role role) {
+    public synchronized boolean remove(Role role) {
         if (role == null) {
             return false;
         }
@@ -68,7 +69,7 @@ public class RoleManager implements Repository<Role> {
     }
 
     @Override
-    public void clear() {
+    public synchronized void clear() {
         rolesById.clear();
         rolesByName.clear();
     }
@@ -86,7 +87,7 @@ public class RoleManager implements Repository<Role> {
     }
 
     public List<Role> findAll(RoleFilter filter, Comparator<Role> sorter) {
-        List<Role> result = new ArrayList<>();
+        List<Role> result = findByFilter(filter);
         result.sort(sorter);
         return result;
     }

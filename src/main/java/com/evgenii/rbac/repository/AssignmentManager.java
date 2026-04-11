@@ -7,10 +7,11 @@ import com.evgenii.rbac.sorter.*;
 import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AssignmentManager implements Repository<RoleAssignment> {
 
-    private Map<String, RoleAssignment> assignments = new HashMap<>();
+    private ConcurrentHashMap<String, RoleAssignment> assignments = new ConcurrentHashMap<>();
     private UserManager userManager;
     private RoleManager roleManager;
 
