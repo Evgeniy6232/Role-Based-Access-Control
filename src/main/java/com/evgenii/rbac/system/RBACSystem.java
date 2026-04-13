@@ -8,6 +8,10 @@ import com.evgenii.rbac.model.User;
 import com.evgenii.rbac.repository.*;
 import com.evgenii.rbac.util.AuditLog;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 public class RBACSystem {
 
     private final UserManager userManager;
@@ -15,6 +19,7 @@ public class RBACSystem {
     private final AssignmentManager assignmentManager;
     private String currentUser;
     private final AuditLog auditLog;
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public RBACSystem() {
         this.userManager = new UserManager();
@@ -32,6 +37,22 @@ public class RBACSystem {
     public String getCurrentUser() { return currentUser; }
     public void setCurrentUser (String username) {
         this.currentUser = username;
+    }
+
+    public void executeAsync(Runnable task) {
+        executor.submit(task);
+    }
+
+    public void shutdown() {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     public void initialize() {

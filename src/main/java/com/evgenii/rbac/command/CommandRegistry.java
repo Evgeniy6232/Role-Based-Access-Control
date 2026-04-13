@@ -10,6 +10,8 @@ import com.evgenii.rbac.model.Role;
 import com.evgenii.rbac.model.User;
 import com.evgenii.rbac.util.*;
 import javax.xml.crypto.dsig.spec.XSLTTransformParameterSpec;
+import java.io.FileWriter;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.logging.ErrorManager;
@@ -955,7 +957,7 @@ public class CommandRegistry {
                 }
         ));
 
-        parser.register(new Command(
+        parser.register(new com.evgenii.rbac.command.Command(
                 "stats",
                 "Статистика системы",
                 (scanner, system, args) -> {
@@ -1100,6 +1102,80 @@ public class CommandRegistry {
                     } else {
                         System.out.println(report);
                     }
+                }
+        ));
+
+        parser.register(new Command(
+                "report-users-async",
+                "Async user report --save  <File>",
+                (scanner, rbacSystem, args) -> {
+
+                    var sig = Map.of("--save", 1);
+                    var parsed = CommandParser.parseArgs(args, sig).orElse(null);
+
+                    if (parsed == null || !parsed.flags().containsKey("--save")) {
+                        System.out.println("Usage: report-users-async --save <file>");
+                        return;
+                    }
+
+                    String file = parsed.flags().get("--save").getFirst();
+                    rbacSystem.executeAsync(() -> {
+                        try {
+                            var gen = new ReportGenerator();
+                            String report = gen.generateUserReport(rbacSystem.getUserManager(), rbacSystem.getAssignmentManager());
+                            gen.exportToFile(report, file);
+                            System.out.println("Saved to " + file);
+                        } catch (Exception e) {
+                            System.out.println("ERROR " + e.getMessage());
+                        }
+                    });
+                }
+        ));
+
+        parser.register(new Command(
+                "save-async",
+                "Async save --file <file>",
+                (scanner, rbacSystem, args) -> {
+                    var sig = Map.of("--file", 1);
+                    var parsed = CommandParser.parseArgs(args, sig).orElse(null);
+
+                    String file = "saveBack.txt";
+                    if (parsed != null && parsed.flags().containsKey("--file")) {
+                        file = parsed.flags().get("--file").getFirst();
+                    }
+
+                    final String fileName = file;
+
+                    rbacSystem.executeAsync(() -> {
+                        try {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("Saved at ").append(LocalDateTime.now()).append("\n\n");
+                            sb.append("Users: \n");
+                            for (var u : rbacSystem.getUserManager().findAll()) {
+                                sb.append("  ").append(u.username()).append("\n");
+                            }
+
+                            sb.append("Roles: \n");
+                            for (var r : rbacSystem.getRoleManager().findAll()) {
+                                sb.append("  ").append(r.getName()).append("\n");
+                            }
+
+                            sb.append("Asssignmnet: \n");
+                            for (var a : rbacSystem.getAssignmentManager().findAll()) {
+                                sb.append("  ").append(a.user().username())
+                                        .append(" -> ").append(a.role().getName()).append("\n");
+                            }
+
+                            try (var writer = new FileWriter(fileName)){
+                                writer.write(sb.toString());
+                            }
+
+                            System.out.println("saved to " + fileName);
+
+                        } catch (Exception e) {
+                            System.out.println("ERROR " + e.getMessage());
+                        }
+                    });
                 }
         ));
     }
