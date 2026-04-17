@@ -1178,6 +1178,23 @@ public class CommandRegistry {
                     });
                 }
         ));
+
+        parser.register(new Command(
+                "check-Expired",
+                "Start checking expired assignmnets --periodicity <sec>",
+                (scanner, rbacSystem, args) -> {
+                    var sig = Map.of("--periodicity", 1);
+                    var parsed = CommandParser.parseArgs(args, sig).orElse(null);
+                    if (parsed == null || !parsed.flags().containsKey("--periodicity")) {
+                        System.out.println("Usage: check-Expired --periodicity 10");
+                        return;
+                    }
+                    int sec = Integer.parseInt(parsed.flags().get("--periodicity").getFirst());
+                    rbacSystem.checkExpired(sec);
+                    System.out.println("Checking expired every " + sec + "second");
+                }
+
+        ));
     }
 
     private static void ArgumentError() {
