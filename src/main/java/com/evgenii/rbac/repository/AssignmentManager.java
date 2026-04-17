@@ -3,7 +3,6 @@ package com.evgenii.rbac.repository;
 import com.evgenii.rbac.assignment.*;
 import com.evgenii.rbac.filter.*;
 import com.evgenii.rbac.model.*;
-import com.evgenii.rbac.sorter.*;
 import com.evgenii.rbac.util.ValidationUtils;
 
 import java.util.*;
@@ -200,6 +199,24 @@ public class AssignmentManager implements Repository<RoleAssignment> {
             throw new IllegalArgumentException("Assignment not a temporary");
         }
 
+    }
+
+    public List<TemporaryAssignment> findExpiredTemporaryAssignments() {
+        List<TemporaryAssignment> expired = new ArrayList<>();
+
+        for (RoleAssignment a : assignments.values()) {
+            if (a instanceof TemporaryAssignment temp && temp.isExpired() && temp.isActive()) {
+                expired.add(temp);
+            }
+
+        }
+        return expired;
+    }
+
+    public void deactivateAssignment (RoleAssignment assignment) {
+        if (assignment instanceof TemporaryAssignment temp) {
+            temp.setActive(false);
+        }
     }
 
     public static void main(String[] args) {

@@ -1,6 +1,7 @@
 package com.evgenii.rbac.system;
 
 import com.evgenii.rbac.assignment.PermanentAssignment;
+import com.evgenii.rbac.assignment.TemporaryAssignment;
 import com.evgenii.rbac.model.AssignmentMetadata;
 import com.evgenii.rbac.model.Permission;
 import com.evgenii.rbac.model.Role;
@@ -8,8 +9,10 @@ import com.evgenii.rbac.model.User;
 import com.evgenii.rbac.repository.*;
 import com.evgenii.rbac.util.AuditLog;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class RBACSystem {
@@ -20,6 +23,25 @@ public class RBACSystem {
     private String currentUser;
     private final AuditLog auditLog;
     private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    public void checkExpired(int periodicity) {
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                List<TemporaryAssignment> expired = assignmentManager.findExpiredTemporaryAssignments();
+                if (!expired.isEmpty()) {
+                    for (TemporaryAssignment ta : expired) {
+                        assignmentManager.deactivateAssignment(ta);
+                    }
+                    auditLog.log("check", "system", "expired",
+                            "Deactivated " + expired.size() + " expired assignments");
+                    System.out.println("Deactivated " + expired.size() + " expired assignments");
+                }
+            } catch (Exception e) {
+                System.err.println("Error check expired: " + e.getMessage());
+            }
+        }, periodicity, periodicity, TimeUnit.SECONDS);
+    }
 
     public RBACSystem() {
         this.userManager = new UserManager();
